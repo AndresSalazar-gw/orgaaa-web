@@ -1,0 +1,205 @@
+/* ORGAAA · RESPONSIVE: tablet y celular */
+.tabbar {
+  display: none;
+}
+
+@media (max-width: 1180px) {
+  :root {
+    --rail: 300px;
+  }
+  .acctgrid {
+    grid-template-columns: 300px minmax(0, 1fr);
+  }
+  .how {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 1020px) {
+  .daily {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .rail {
+    position: static;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .weekgrid {
+    grid-template-columns: repeat(7, minmax(120px, 1fr));
+    overflow-x: auto;
+  }
+  .pcols {
+    grid-template-columns: 1fr;
+  }
+  .twocol {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Celular: la barra lateral se vuelve barra inferior de 3 */
+@media (max-width: 860px) {
+  :root {
+    --side: 0px;
+  }
+  .shell {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .side {
+    display: none;
+  }
+  .main {
+    padding: 62px 18px 120px;
+  }
+  .hero {
+    grid-template-columns: 1fr;
+  }
+  .hero .tmr {
+    grid-row: auto !important;
+    grid-column: 1 !important;
+    margin-top: 18px;
+  }
+  .paper {
+    padding-bottom: 80px !important;
+  }
+  h1 {
+    font-size: 36px;
+  }
+  .hero {
+    min-height: 280px;
+    padding: 22px;
+  }
+  .hero h2 {
+    font-size: 36px;
+  }
+  .tmr {
+    font-size: 64px;
+  }
+  .rail {
+    grid-template-columns: 1fr;
+  }
+  .tabbar {
+    display: flex;
+    position: fixed;
+    left: 50%;
+    transform: translateX(-50%);
+    bottom: 18px;
+    width: min(300px, calc(100% - 36px));
+    height: 64px;
+    border-radius: 32px;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0 8px;
+    z-index: 50;
+  }
+  .tabbar button {
+    flex: 1;
+    height: 50px;
+    border-radius: 25px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    font-size: 10.5px;
+    font-weight: 600;
+    color: var(--fa);
+  }
+  .tabbar button svg {
+    width: 21px;
+    height: 21px;
+  }
+  .tabbar button.on {
+    color: #fff;
+  }
+  .tabbar .mic {
+    flex: none;
+    width: 52px;
+    height: 52px;
+    border-radius: 50%;
+    background: var(--orange);
+    color: #111;
+    margin: 0 6px;
+  }
+  .tabbar .mic.on {
+    color: #111;
+  }
+  .bar .seg span {
+    display: none;
+  }
+  .split {
+    grid-template-columns: 1fr;
+  }
+  .brandside {
+    min-height: 220px;
+  }
+  .brandside .big {
+    font-size: 56px;
+  }
+  .artside {
+    border-right: 0;
+    border-bottom: 1px solid var(--line);
+    padding: 24px;
+  }
+  .artside .stage {
+    width: min(320px, 90%);
+  }
+  .formside {
+    padding: 28px 22px 40px;
+    justify-content: flex-start;
+  }
+  .formside .back {
+    position: static;
+    margin-bottom: 12px;
+  }
+  .circ {
+    width: 104px;
+    height: 104px;
+    font-size: 14px;
+  }
+  .acctgrid {
+    grid-template-columns: 1fr;
+  }
+  .acctgrid.sub .acctside {
+    display: none;
+  }
+  .acctgrid:not(.sub) .pane {
+    display: none;
+  }
+  .pane .back {
+    display: inline-grid;
+    margin-bottom: 10px;
+  }
+  .pfgrid,
+  .plans {
+    grid-template-columns: 1fr;
+  }
+  .how,
+  .how3 {
+    grid-template-columns: 1fr;
+  }
+  .kan {
+    grid-template-columns: repeat(4, 240px);
+  }
+  .paper {
+    padding: 30px 22px 30px 70px;
+    font-size: 24px;
+  }
+  .drawer {
+    top: auto;
+    left: 8px;
+    right: 8px;
+    bottom: 8px;
+    width: auto;
+    max-height: 86vh;
+    transform: translateY(110%);
+  }
+  .drawer.on {
+    transform: none;
+  }
+  .island {
+    left: 50%;
+    top: 10px;
+  }
+  .toast {
+    bottom: 96px;
+  }
+}

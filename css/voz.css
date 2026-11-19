@@ -1,0 +1,298 @@
+/* =========================================================
+   ORGAAA · CHAT CON ORGA
+   Conversación tipo mensajería: Orga a la izquierda, vos a la derecha,
+   barra para escribir o hablar abajo. Colores desde tokens.css.
+   ========================================================= */
+
+/* Columna del chat: ocupa el alto de la pantalla y la conversación hace scroll por dentro. */
+.chat {
+  max-width: 780px;
+  margin: 0 auto;
+  height: calc(100vh - 130px);
+  height: calc(100dvh - 130px);
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.chat-hd {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.chat-hd b {
+  display: block;
+  font-size: 18px;
+}
+.chat-hd .sp {
+  flex: 1;
+}
+
+/* Orbe naranja de Orga (su "foto de perfil"). */
+.corb {
+  flex: none;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 30% 25%, rgba(255, 255, 255, 0.55), rgba(255, 255, 255, 0) 34%),
+    radial-gradient(circle at 60% 70%, var(--orange), rgba(239, 122, 53, 0.4) 70%);
+  box-shadow: 0 0 18px -4px rgba(239, 122, 53, 0.7);
+}
+.corb.sm {
+  width: 40px;
+  height: 40px;
+}
+
+/* La conversación */
+.chat-log {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 6px 2px 10px;
+  scroll-behavior: smooth;
+}
+.cm {
+  display: flex;
+  gap: 10px;
+  align-items: flex-end;
+  animation: cmIn 0.3s ease-out;
+}
+@keyframes cmIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+.cm.yo {
+  justify-content: flex-end;
+}
+.bub {
+  max-width: min(560px, 82%);
+  padding: 12px 16px;
+  border-radius: 20px;
+  font-size: 15.5px;
+  line-height: 1.5;
+}
+/* Burbuja de Orga: vidrio. */
+.cm.bot .bub {
+  background: var(--glass-bg);
+  border: var(--glass-border);
+  border-bottom-left-radius: 6px;
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+}
+/* Tu burbuja: naranja. */
+.cm.yo .bub {
+  background: var(--orange);
+  color: #111;
+  border-bottom-right-radius: 6px;
+  font-weight: 500;
+}
+.cm.yo .bub svg {
+  width: 14px;
+  height: 14px;
+  margin: 0 6px -2px 0;
+  opacity: 0.7;
+}
+
+/* "Escribiendo…" con tres puntitos */
+.bub.typing {
+  display: flex;
+  gap: 5px;
+  padding: 16px 18px;
+}
+.bub.typing i {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--mu);
+  animation: tdot 1s ease-in-out infinite;
+}
+.bub.typing i:nth-child(2) {
+  animation-delay: 0.15s;
+}
+.bub.typing i:nth-child(3) {
+  animation-delay: 0.3s;
+}
+@keyframes tdot {
+  50% {
+    transform: translateY(-5px);
+    opacity: 0.4;
+  }
+}
+
+/* Tarjetas de tareas dentro de una respuesta */
+.citems,
+.cdraft {
+  display: grid;
+  gap: 6px;
+  margin-top: 12px;
+}
+.ctask {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 12px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.06);
+  font-size: 14px;
+}
+.ctask > span {
+  flex: 1;
+  cursor: pointer;
+}
+.ctask em {
+  font-style: normal;
+  color: var(--mu);
+}
+.ctask .chk {
+  width: 20px;
+  height: 20px;
+}
+.ctask.done > span {
+  text-decoration: line-through;
+  text-decoration-color: var(--orange);
+  color: var(--mu);
+}
+.cbtns {
+  display: flex;
+  gap: 8px;
+  margin-top: 6px;
+}
+.cbtns .wbtn {
+  padding: 10px 18px;
+}
+.cdone {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 6px;
+  color: var(--lime);
+  font-size: 14px;
+}
+.cdraft .fine {
+  margin: 2px 0 0;
+  font-size: 12px;
+  color: var(--fa);
+}
+.csug {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding-left: 40px;
+}
+.cerr {
+  margin: 0 0 0 40px;
+  font-size: 14px;
+  color: var(--yellow);
+}
+
+/* Barra de abajo: micrófono + texto + enviar */
+.chat-in {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px;
+  border-radius: 999px;
+}
+.chat-in input {
+  flex: 1;
+  min-width: 0;
+  background: none;
+  border: 0;
+  outline: 0;
+  color: var(--tx);
+  font: inherit;
+  font-size: 16px; /* 16px evita que el iPhone haga zoom al tocar */
+  padding: 8px 4px;
+}
+.chat-in input::placeholder {
+  color: var(--fa);
+}
+.cmic,
+.csend {
+  flex: none;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+}
+.cmic {
+  background: var(--orange);
+  color: #111;
+}
+.cmic svg,
+.csend svg {
+  width: 20px;
+  height: 20px;
+}
+.csend {
+  background: rgba(255, 255, 255, 0.1);
+}
+.csend:hover {
+  background: rgba(255, 255, 255, 0.18);
+}
+/* Escuchando: el micrófono late y muestra barritas de onda. */
+.chat-in.on .cmic {
+  animation: vpulse 1.2s ease-in-out infinite;
+  box-shadow: 0 0 0 6px rgba(239, 122, 53, 0.25);
+}
+@keyframes vpulse {
+  50% {
+    box-shadow: 0 0 0 12px rgba(239, 122, 53, 0.08);
+  }
+}
+.vbars {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  height: 22px;
+}
+.vbars b {
+  width: 3px;
+  height: 6px;
+  border-radius: 3px;
+  background: #111;
+  animation: vbar 0.9s ease-in-out infinite;
+}
+.vbars b:nth-child(2) {
+  animation-delay: 0.12s;
+}
+.vbars b:nth-child(3) {
+  animation-delay: 0.24s;
+}
+.vbars b:nth-child(4) {
+  animation-delay: 0.36s;
+}
+@keyframes vbar {
+  50% {
+    height: 20px;
+  }
+}
+
+/* Botón "Hey Orga" en la barra de Daily */
+.vozbtn svg {
+  color: var(--orange);
+}
+
+/* Celular: deja espacio a la barra de abajo */
+@media (max-width: 860px) {
+  .chat {
+    height: calc(100dvh - 62px - 120px);
+  }
+  .bub {
+    max-width: 88%;
+    font-size: 15px;
+  }
+  .csug {
+    padding-left: 0;
+  }
+  .vozbtn {
+    font-size: 0;
+    gap: 0;
+  }
+}

@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>ORGAAA · Web</title>
+    <meta
+      name="description"
+      content="ORGAAA junta tus pendientes de WhatsApp, Slack, Calendar y Notion, los ordena con IA y te dice cómo empezar."
+    />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@500;800;900&family=Geist:wght@300;400;500;600;700&family=Caveat:wght@500;700&display=swap"
+      rel="stylesheet"
+    />
+    <!-- Estilos: tokens.css es lo que cambia el equipo de branding -->
+    <link rel="stylesheet" href="css/tokens.css" />
+    <link rel="stylesheet" href="css/base.css" />
+    <link rel="stylesheet" href="css/entry.css" />
+    <link rel="stylesheet" href="css/app.css" />
+    <link rel="stylesheet" href="css/voz.css" />
+    <link rel="stylesheet" href="css/responsive.css" />
+    <script src="https://cdn.jsdelivr.net/npm/roughjs@4.6.6/bundled/rough.js"></script>
+  </head>
+  <body>
+    <!-- Luz de fondo detrás del vidrio -->
+    <div class="fx" aria-hidden="true">
+      <i class="a"></i><i class="b"></i><i class="c"></i><i class="d"></i><i class="e"></i><i class="f"></i
+      ><i class="g"></i>
+      <div class="mm"></div>
+      <div class="grain"></div>
+    </div>
+
+    <!-- La app se dibuja aquí (ver js/app.js → render) -->
+    <div id="root"></div>
+
+    <!-- Isla: temporizador de foco y mensajes que entran -->
+    <div id="island" class="island" aria-live="polite"></div>
+
+    <!-- Panel lateral (detalle de tarea) y modales -->
+    <div id="scrim" class="scrim" data-a="closeall"></div>
+    <aside id="drawer" class="drawer glass" aria-label="Detalle"></aside>
+    <div id="modal" class="modal" role="dialog" aria-modal="true"></div>
+    <!-- Mini tutorial de la primera vez -->
+    <div id="coach" class="coach"></div>
+    <div id="toast" class="toast" role="status"></div>
+
+    <!-- Solo para la demo: saltar a cualquier pantalla. Borrar al lanzar. -->
+    <button class="demo-nav" data-a="tour" aria-label="Recorrido de pantallas">☰ Pantallas</button>
+
+    <!-- Orden de carga: datos → núcleo → vistas → app -->
+    <script src="js/data.js"></script>
+    <script src="js/core.js"></script>
+    <script src="js/sketch.js"></script>
+    <script src="js/views-entry.js"></script>
+    <script src="js/views-daily.js"></script>
+    <script src="js/views-orga.js"></script>
+    <script src="js/views-cuenta.js"></script>
+    <script src="js/voz.js"></script>
+    <script src="js/app.js"></script>
+  </body>
+</html>
