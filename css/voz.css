@@ -157,6 +157,28 @@
   width: 20px;
   height: 20px;
 }
+/* Razón corta del orden, debajo del texto de Orga. */
+.crazon {
+  margin: 6px 0 0;
+  font-size: 13px;
+  color: var(--mu);
+}
+/* Número 1, 2, 3 de las tarjetas cuando Orga prioriza. */
+.ctask .cnum {
+  width: 22px;
+  height: 22px;
+  flex: none;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--orange);
+  color: var(--bg);
+  font-size: 12px;
+  font-weight: 700;
+}
+.ctask.done .cnum {
+  opacity: 0.4;
+}
 .ctask.done > span {
   text-decoration: line-through;
   text-decoration-color: var(--orange);

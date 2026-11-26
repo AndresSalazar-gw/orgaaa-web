@@ -95,13 +95,26 @@ function cmHtml(m, mi) {
       }</div>`
     : '';
   // Razón del orden (cuando Claude priorizó): una línea chiquita debajo del texto.
-  const razon = m.razon ? `<p class="fine">${esc(m.razon)}</p>` : '';
+  const razon = m.razon ? `<p class="crazon">${esc(m.razon)}</p>` : '';
+  // Top 3 al priorizar: tarjetas numeradas 1, 2, 3 (se leen en vivo, igual que las otras).
+  const top = (m.top || [])
+    .map(findT)
+    .filter(Boolean)
+    .map(
+      (t, k) => `<div class="ctask ${t.done ? 'done' : ''}">
+      <b class="cnum">${k + 1}</b>
+      <span data-a="task" data-id="${t.id}">${esc(t.title)}</span><em>${t.min} min</em>
+      <button class="chk" data-a="done" data-id="${t.id}" aria-label="Marcar hecha">${I.check}</button></div>`,
+    )
+    .join('');
   // Botón para activar avisos del navegador: solo si este mensaje creó un recordatorio y todavía no hay permiso.
   const avisos =
     m.avisos && 'Notification' in window && Notification.permission === 'default'
       ? '<div class="cbtns"><button class="gbtn glass" data-a="avisos">Activar avisos</button></div>'
       : '';
-  return `<div class="cm bot"><span class="corb"></span><div class="bub">${esc(m.text)}${razon}${items ? `<div class="citems">${items}</div>` : ''}${draft}${avisos}</div></div>`;
+  // Si no hay texto (puede pasar al priorizar), la burbuja muestra solo la razón y las tarjetas.
+  const texto = m.text ? esc(m.text) : '';
+  return `<div class="cm bot"><span class="corb"></span><div class="bub">${texto}${razon}${top ? `<div class="citems ctop">${top}</div>` : ''}${items ? `<div class="citems">${items}</div>` : ''}${draft}${avisos}</div></div>`;
 }
 
 /* ---------- lógica del chat ---------- */
@@ -257,6 +270,7 @@ function aplicarAcciones(r) {
   const ids = []; // tareas que se muestran como tarjetas debajo del mensaje
   const hecho = []; // frases de respaldo por si Claude no escribió texto
   let razon = ''; // razón del orden, si priorizó
+  let top = []; // ids de las 3 primeras al priorizar (tarjetas numeradas 1, 2, 3)
   let avisos = false; // true si se creó un recordatorio (para ofrecer "Activar avisos")
 
   r.actions.forEach((a, i) => {
@@ -292,7 +306,7 @@ function aplicarAcciones(r) {
           t.prio = k < 3 ? 1 : k < 5 ? 2 : 3;
           t.moved = false;
         });
-        ids.push(...orden.slice(0, 3).map((t) => t.id)); // mostramos las 3 primeras
+        top = orden.slice(0, 3).map((t) => t.id); // las 3 primeras, como tarjetas numeradas
         razon = a.razon_corta || '';
         if (orden[0]) hecho.push(`Empezá por ${orden[0].title}.`);
       }
@@ -324,7 +338,8 @@ function aplicarAcciones(r) {
 
   // Texto final: lo que escribió Claude; si no escribió nada, armamos uno con lo que se hizo.
   const text = r.reply || hecho.join(' ') || 'Listo.';
-  return { who: 'orga', text, ids: [...new Set(ids)], razon, avisos };
+  // Las tarjetas normales no repiten las que ya salen numeradas.
+  return { who: 'orga', text, ids: [...new Set(ids)].filter((id) => !top.includes(id)), top, razon, avisos };
 }
 
 // fechaLimite() convierte "AAAA-MM-DD" (o null) en lo que usa la app:

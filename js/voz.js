@@ -239,9 +239,16 @@ async function preguntarAClaude() {
     role: m.who === 'yo' ? 'user' : 'assistant',
     content: m.text,
   }));
-  // Tareas de las apps conectadas: primero las pendientes, después las hechas. Máximo 80.
+  // Tareas de las apps conectadas, en este orden: las pendientes de Hoy (igual que la lista, openT),
+  // después las otras pendientes y al final las hechas. Máximo 80.
+  // Así el servidor sabe cuál es "la primera" (con esa arranca el foco).
   const todas = S.tasks.filter((t) => srcOn(t.src));
-  const tareas = [...todas.filter((t) => !t.done), ...todas.filter((t) => t.done)].slice(0, 80).map((t) => ({
+  const hoy = openT();
+  const tareas = [
+    ...hoy,
+    ...todas.filter((t) => !t.done && !hoy.includes(t)),
+    ...todas.filter((t) => t.done),
+  ].slice(0, 80).map((t) => ({
     id: t.id,
     titulo: t.title,
     workspace: t.ws || null,
