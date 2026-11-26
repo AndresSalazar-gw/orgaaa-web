@@ -5,12 +5,27 @@
    · Preguntas ("¿qué tengo hoy?", "terminé") → responde con tus tareas reales (voz.js → responder)
    · Pendientes sueltos ("mañana tengo parcial y pagar internet") → los separa en tareas
      y te deja agregarlas con un botón (borrador dentro del chat).
+   Primero le pregunta a Claude (voz.js → preguntarAClaude). Claude contesta con texto y
+   acciones (agregar, completar, priorizar, recordar, enfocarse) que aquí se aplican.
+   Si no hay servidor (ej. Live Server), usa el respaldo de palabras clave de arriba.
    ========================================================= */
 
 // Estado del chat que NO se guarda: si está escuchando, pensando, y el texto a medias del micrófono.
-const orga = { listening: false, busy: false, partial: '', err: '' };
+// claude = true si la última respuesta vino de Claude, false si vino del respaldo (Demo).
+const orga = { listening: false, busy: false, partial: '', err: '', claude: false };
 // El historial SÍ se guarda (S.chat), para que siga ahí si recargás.
 const msgs = () => S.chat || (S.chat = []);
+// Los recordatorios también se guardan en S (y S va a localStorage con save()).
+const recordatorios = () => S.reminders || (S.reminders = []);
+// Texto de la etiqueta del encabezado según lo que esté pasando.
+const chatLabel = () =>
+  orga.listening ? 'Te escucho…' : orga.busy ? 'Orga está pensando…' : 'Preguntale o contale tus pendientes';
+// orgaDot() dibuja el puntito discreto del encabezado: verde = Claude, gris = Demo (tooltip al pasar el mouse).
+const orgaDot = () => {
+  const on = orga.claude || !!sampleFn;
+  const txt = on ? 'Claude' : 'Demo';
+  return `<span class="dotai mini ${on ? 'on' : ''}" title="${txt}" aria-label="${txt}"><i></i></span>`;
+};
 
 // Frases para tocar cuando el chat está vacío.
 const SUGIERE = ['¿Qué tengo que hacer hoy?', '¿Qué sigue?', '¿Qué hay mañana?', '¿Quién me escribió?'];
@@ -18,7 +33,7 @@ const SUGIERE = ['¿Qué tengo que hacer hoy?', '¿Qué sigue?', '¿Qué hay ma�
 /* ---------- la pantalla ---------- */
 // V.orga dibuja el chat completo: encabezado, conversación y la barra para escribir.
 V.orga = () => `<div class="chat">
-    <div class="chat-hd"><span class="corb sm"></span><div><b>Orga</b><span class="label">${orga.listening ? 'Te escucho…' : orga.busy ? 'Escribiendo…' : 'Preguntale o contale tus pendientes'}</span></div><span class="sp"></span>${ai()}${msgs().length ? '<button class="gbtn glass" data-a="chatclear">Nueva charla</button>' : ''}</div>
+    <div class="chat-hd"><span class="corb sm"></span><div><b>Orga</b><span class="label">${chatLabel()}</span></div><span class="sp"></span>${orgaDot()}${msgs().length ? '<button class="gbtn glass" data-a="chatclear">Nueva charla</button>' : ''}</div>
     <div class="chat-log" id="chatLog">${chatLog()}</div>
     <form class="chat-in glass ${orga.listening ? 'on' : ''}" data-form="chat">
       <button type="button" class="cmic" data-a="chatmic" aria-label="${orga.listening ? 'Parar' : 'Hablar'}">${orga.listening ? '<span class="vbars"><b></b><b></b><b></b><b></b></span>' : I.mic}</button>
@@ -37,7 +52,8 @@ function chatLog() {
         .map((q, i) => `<button class="chip" data-a="chatask" data-q="${esc(i < SUGIERE.length ? q : EXAMPLES[0])}">${esc(q)}</button>`)
         .join('')}</div>`
     : '';
-  const typing = orga.busy ? '<div class="cm bot"><span class="corb"></span><div class="bub typing"><i></i><i></i><i></i></div></div>' : '';
+  // Burbuja de puntitos mientras Orga piensa (con texto para lectores de pantalla).
+  const typing = orga.busy ? '<div class="cm bot"><span class="corb"></span><div class="bub typing" role="status" aria-label="Orga está pensando…"><i></i><i></i><i></i></div></div>' : '';
   const err = orga.err ? `<p class="cerr">${esc(orga.err)}</p>` : '';
   return hola + chips + list + typing + err;
 }
@@ -78,7 +94,14 @@ function cmHtml(m, mi) {
           : `<div class="cbtns"><button class="wbtn" data-a="chatadd" data-m="${mi}">Agregar ${d.tareas.length}</button><button class="gbtn glass" data-a="chatdrop" data-m="${mi}">Descartar</button></div><p class="fine">Tocá el workspace para cambiarlo. Orga aprende.</p>`
       }</div>`
     : '';
-  return `<div class="cm bot"><span class="corb"></span><div class="bub">${esc(m.text)}${items ? `<div class="citems">${items}</div>` : ''}${draft}</div></div>`;
+  // Razón del orden (cuando Claude priorizó): una línea chiquita debajo del texto.
+  const razon = m.razon ? `<p class="fine">${esc(m.razon)}</p>` : '';
+  // Botón para activar avisos del navegador: solo si este mensaje creó un recordatorio y todavía no hay permiso.
+  const avisos =
+    m.avisos && 'Notification' in window && Notification.permission === 'default'
+      ? '<div class="cbtns"><button class="gbtn glass" data-a="avisos">Activar avisos</button></div>'
+      : '';
+  return `<div class="cm bot"><span class="corb"></span><div class="bub">${esc(m.text)}${razon}${items ? `<div class="citems">${items}</div>` : ''}${draft}${avisos}</div></div>`;
 }
 
 /* ---------- lógica del chat ---------- */
@@ -89,7 +112,10 @@ function chatDraw() {
   log.innerHTML = chatLog();
   log.scrollTop = log.scrollHeight; // baja al último mensaje
   const lb = $('.chat-hd .label');
-  if (lb) lb.textContent = orga.listening ? 'Te escucho…' : orga.busy ? 'Escribiendo…' : 'Preguntale o contale tus pendientes';
+  if (lb) lb.textContent = chatLabel();
+  // Actualizamos también el puntito Claude / Demo.
+  const dot = $('.chat-hd .dotai');
+  if (dot) dot.outerHTML = orgaDot();
 }
 // Después de cada render() completo, bajamos al último mensaje.
 function chatAfter() {
@@ -161,15 +187,42 @@ Mensaje: "${text}"`,
   return (r.text || '').trim();
 }
 
-// enviar() es el corazón del chat: agrega tu mensaje, decide qué hacer y agrega la respuesta de Orga.
+// enviar() es el corazón del chat: agrega tu mensaje, le pregunta a Claude y agrega la respuesta de Orga.
+// Si Claude no está disponible, usa el respaldo de palabras clave (respaldo()).
 // porVoz = true si lo dijiste hablando → Orga también contesta hablando.
 async function enviar(text, porVoz = false) {
   text = (text || '').trim();
   if (!text || orga.busy) return;
   orga.err = '';
   msgs().push({ who: 'yo', text, voz: porVoz });
-  orga.busy = true;
+  orga.busy = true; // prende "Orga está pensando…"
   chatDraw();
+  let m;
+  // 1) Le preguntamos a Claude a través del servidor.
+  const r = await Voz.preguntarAClaude();
+  if (r && r.aviso) {
+    // El servidor avisó algo (mensaje muy largo, muchos pedidos): lo mostramos.
+    m = { who: 'orga', text: r.aviso };
+  } else if (r) {
+    // Claude contestó: aplicamos sus acciones y armamos el mensaje.
+    orga.claude = true;
+    m = aplicarAcciones(r);
+  } else {
+    // 2) Sin servidor: el sistema de palabras clave de siempre, para que Orga nunca quede muda.
+    orga.claude = false;
+    m = await respaldo(text);
+  }
+  msgs().push(m);
+  if (S.chat.length > 40) S.chat = S.chat.slice(-40); // guardamos solo los últimos 40
+  orga.busy = false;
+  save();
+  chatDraw();
+  if (porVoz) Voz.hablar(m.text); // si le hablaste, Orga te contesta en voz alta
+}
+
+// respaldo() es el chat SIN Claude (modo Demo): decide si es una lista de pendientes o una pregunta
+// y responde con las reglas de palabras clave. Devuelve el mensaje de Orga.
+async function respaldo(text) {
   await new Promise((x) => setTimeout(x, 450)); // pausa chiquita: se siente que "piensa"
   let m;
   if (esPendiente(text)) {
@@ -194,42 +247,183 @@ async function enviar(text, porVoz = false) {
     }
     m = { who: 'orga', text: texto, ids: r.items.map((x) => x.id) };
   }
-  msgs().push(m);
-  if (S.chat.length > 40) S.chat = S.chat.slice(-40); // guardamos solo los últimos 40
-  orga.busy = false;
-  save();
-  chatDraw();
-  if (porVoz) Voz.hablar(m.text);
+  return m;
+}
+
+/* ---------- acciones que manda Claude ---------- */
+// aplicarAcciones() recibe { reply, actions } del servidor, ejecuta cada acción
+// con la lógica que ya tiene la app, y devuelve el mensaje de Orga para el chat.
+function aplicarAcciones(r) {
+  const ids = []; // tareas que se muestran como tarjetas debajo del mensaje
+  const hecho = []; // frases de respaldo por si Claude no escribió texto
+  let razon = ''; // razón del orden, si priorizó
+  let avisos = false; // true si se creó un recordatorio (para ofrecer "Activar avisos")
+
+  r.actions.forEach((a, i) => {
+    // try/catch: si una acción viene rara, la saltamos sin romper las demás.
+    try {
+      // agregar_tarea → crea la tarea con la misma función que usan los borradores.
+      if (a.tipo === 'agregar_tarea') {
+        const fecha = fechaLimite(a.fecha_limite, a.prioridad);
+        // Si Claude no eligió workspace (o eligió uno que no existe), lo decide classify() como siempre.
+        const ws = wsById(a.workspace) ? a.workspace : classify(a.titulo, null).ws;
+        const t = nuevaTarea(
+          { titulo: a.titulo, ws, prioridad: a.prioridad, minutos: a.minutos_estimados, cuando: fecha.due, consejo: a.primer_paso },
+          i,
+          fecha.day,
+        );
+        ids.push(t.id);
+        hecho.push(`Agregué ${t.title}.`);
+      }
+      // completar_tarea → la misma función del botón ✓ (tacha, cuenta y guarda).
+      if (a.tipo === 'completar_tarea') {
+        const t = findT(a.id);
+        if (t && !t.done) {
+          done(t.id);
+          ids.push(t.id);
+          hecho.push(`Listo, cerré ${t.title}.`);
+        }
+      }
+      // priorizar → reordena la lista de Hoy igual que el botón Reorganizar (reorg en app.js).
+      if (a.tipo === 'priorizar') {
+        const orden = (a.ids_en_orden || []).map(findT).filter((t) => t && !t.done);
+        orden.forEach((t, k) => {
+          t.ord = k - 1000; // negativo: quedan antes que las tareas que Claude no nombró
+          t.prio = k < 3 ? 1 : k < 5 ? 2 : 3;
+          t.moved = false;
+        });
+        ids.push(...orden.slice(0, 3).map((t) => t.id)); // mostramos las 3 primeras
+        razon = a.razon_corta || '';
+        if (orden[0]) hecho.push(`Empezá por ${orden[0].title}.`);
+      }
+      // recordar → se guarda en S.reminders; revisarRecordatorios() avisa a la hora.
+      if (a.tipo === 'recordar') {
+        const cuando = Date.parse(a.fecha_hora_iso);
+        if (!isNaN(cuando)) {
+          recordatorios().push({ id: uid('r'), titulo: a.titulo, cuando, avisado: false });
+          avisos = true;
+          hecho.push(`Te aviso ${cuandoTxt(cuando)}: ${a.titulo}.`);
+        }
+      }
+      // iniciar_foco → el mismo temporizador de la isla, con la primera tarea pendiente.
+      if (a.tipo === 'iniciar_foco') {
+        const top = openT()[0];
+        if (top) {
+          const min = Math.min(120, Math.max(1, Math.round(+a.minutos) || 10));
+          top.moved = false;
+          S.focus = { id: top.id, start: Date.now(), dur: min * 60000 };
+          island();
+          ids.push(top.id);
+          hecho.push(`Dale, ${min} minutos con ${top.title}. ${top.start}`);
+        }
+      }
+    } catch (e) {
+      console.warn('Orga: no pude aplicar la acción', a && a.tipo, e);
+    }
+  });
+
+  // Texto final: lo que escribió Claude; si no escribió nada, armamos uno con lo que se hizo.
+  const text = r.reply || hecho.join(' ') || 'Listo.';
+  return { who: 'orga', text, ids: [...new Set(ids)], razon, avisos };
+}
+
+// fechaLimite() convierte "AAAA-MM-DD" (o null) en lo que usa la app:
+// day = días desde hoy (0 hoy, 1 mañana…) y due = etiqueta corta ("Hoy", "Mañana", "Vie", "12/12").
+function fechaLimite(iso, prioridad) {
+  // Sin fecha: si es urgente va para hoy; si no, "Esta semana".
+  if (!iso || !/^\d{4}-\d{2}-\d{2}$/.test(iso))
+    return prioridad === 1 ? { day: 0, due: 'Hoy' } : { day: 2, due: 'Esta semana' };
+  const [y, mo, d] = iso.split('-').map(Number);
+  const hoy = new Date();
+  hoy.setHours(0, 0, 0, 0);
+  // Diferencia en días entre esa fecha y hoy (si ya pasó, cuenta como hoy: lo demás espera).
+  const day = Math.max(0, Math.round((new Date(y, mo - 1, d) - hoy) / 86400000));
+  const DIAS = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
+  const due = day === 0 ? 'Hoy' : day === 1 ? 'Mañana' : day < 7 ? DIAS[new Date(y, mo - 1, d).getDay()] : `${d}/${mo}`;
+  return { day, due };
+}
+
+// cuandoTxt() dice una hora como la diría una persona: "hoy a las 3:30 p. m." o "el viernes a las 9:00 a. m.".
+function cuandoTxt(ms) {
+  const f = new Date(ms);
+  const hora = f.toLocaleTimeString('es-SV', { hour: 'numeric', minute: '2-digit' });
+  const hoy = new Date();
+  const manana = new Date();
+  manana.setDate(hoy.getDate() + 1);
+  if (f.toDateString() === hoy.toDateString()) return `hoy a las ${hora}`;
+  if (f.toDateString() === manana.toDateString()) return `mañana a las ${hora}`;
+  return `el ${f.toLocaleDateString('es-SV', { weekday: 'long', day: 'numeric' })} a las ${hora}`;
+}
+
+/* ---------- recordatorios ---------- */
+// revisarRecordatorios() mira si a algún recordatorio ya le llegó la hora.
+// Si sí: mensaje en el chat, toast y notificación del navegador (si diste permiso).
+function revisarRecordatorios() {
+  const ahora = Date.now();
+  let hubo = false;
+  recordatorios().forEach((r) => {
+    if (r.avisado || r.cuando > ahora) return;
+    r.avisado = true;
+    hubo = true;
+    // Si la página estaba cerrada y se pasó la hora, lo decimos sin culpa.
+    const tarde = ahora - r.cuando > 5 * 60000;
+    const texto = tarde ? `Este era para hace un rato: ${r.titulo}. Todavía estás a tiempo.` : `Recordatorio: ${r.titulo}.`;
+    msgs().push({ who: 'orga', text: texto });
+    toast('⏰ ' + r.titulo);
+    // Notification = aviso del sistema operativo, aunque estés en otra pestaña.
+    if ('Notification' in window && Notification.permission === 'granted') {
+      try {
+        new Notification('Orga', { body: r.titulo });
+      } catch (e) {}
+    }
+  });
+  if (hubo) {
+    // Borramos los avisados de hace más de un día, para que la lista no crezca para siempre.
+    S.reminders = recordatorios().filter((r) => !r.avisado || ahora - r.cuando < 86400000);
+    save();
+    chatDraw();
+  }
+}
+// Revisamos cada 15 segundos, y una vez al abrir la página (por si se pasó alguno con la página cerrada).
+setInterval(revisarRecordatorios, 15000);
+setTimeout(revisarRecordatorios, 2000);
+
+/* ---------- crear tareas ---------- */
+// nuevaTarea() crea UNA tarea y la mete en tu lista. La usan los borradores del chat y las acciones de Claude.
+// t = { titulo, ws, prioridad, minutos, cuando, consejo } · i = posición (para el orden) · day = días desde hoy.
+function nuevaTarea(t, i = 0, day = dayOf(t.cuando)) {
+  const tarea = {
+    id: uid('t'),
+    ws: t.ws,
+    title: t.titulo,
+    src: 'voz',
+    from: 'Vos',
+    due: t.cuando || 'Esta semana',
+    day,
+    prio: [1, 2, 3].includes(t.prioridad) ? t.prioridad : 2,
+    ord: t.prioridad === 1 ? -2 + i * 0.01 : 40 + i,
+    min: +t.minutos || 15,
+    start: t.consejo || CANNED[0],
+  };
+  S.tasks.push(tarea);
+  return tarea;
+}
+// dayOf() convierte "Mañana", "Vie", "viernes"… en días desde hoy (0 hoy, 1 mañana…).
+function dayOf(c) {
+  const k = (c || '').toLowerCase();
+  if (!k || k === 'hoy') return 0;
+  if (k === 'mañana') return 1;
+  const d = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'].findIndex((x) =>
+    x.startsWith(k.slice(0, 3)),
+  );
+  return d < 0 ? 2 : (d - new Date().getDay() + 7) % 7;
 }
 
 // agregarBorrador() mete en tu lista las tareas del borrador del mensaje número mi.
 function agregarBorrador(mi) {
   const m = msgs()[mi];
   if (!m || !m.draft || m.draft.added) return;
-  const dayOf = (c) => {
-    const k = (c || '').toLowerCase();
-    if (!k || k === 'hoy') return 0;
-    if (k === 'mañana') return 1;
-    const d = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'].findIndex((x) =>
-      x.startsWith(k.slice(0, 3)),
-    );
-    return d < 0 ? 2 : (d - new Date().getDay() + 7) % 7;
-  };
-  m.draft.tareas.forEach((t, i) =>
-    S.tasks.push({
-      id: uid('t'),
-      ws: t.ws,
-      title: t.titulo,
-      src: 'voz',
-      from: 'Vos',
-      due: t.cuando || 'Esta semana',
-      day: dayOf(t.cuando),
-      prio: [1, 2, 3].includes(t.prioridad) ? t.prioridad : 2,
-      ord: t.prioridad === 1 ? -2 + i * 0.01 : 40 + i,
-      min: +t.minutos || 15,
-      start: t.consejo || CANNED[0],
-    }),
-  );
+  m.draft.tareas.forEach((t, i) => nuevaTarea(t, i));
   m.draft.added = true;
   save();
   toast(`✳ ${m.draft.tareas.length} agregadas`);

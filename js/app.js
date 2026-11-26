@@ -283,9 +283,11 @@ function island() {
 function tick() {
   if (!S.focus) return;
   if (left() <= 0) {
+    // Minutos reales del foco (Claude puede pedir 10, 25…), para el mensaje final.
+    const min = Math.round(S.focus.dur / 60000);
     S.focus = null;
     save();
-    toast('¡10 min! Ya arrancaste.');
+    toast(`¡${min} min! Ya arrancaste.`);
     render();
     return;
   }
@@ -790,6 +792,15 @@ const A = {
     S.chat = [];
     save();
     render();
+  },
+  // "Activar avisos": pide permiso para las notificaciones de los recordatorios.
+  // El navegador solo deja pedirlo después de un toque del usuario, por eso es un botón.
+  avisos: () => {
+    if (!('Notification' in window)) return toast('Este navegador no tiene avisos. Te aviso en el chat.');
+    Notification.requestPermission().then((p) => {
+      toast(p === 'granted' ? '✓ Avisos activados' : 'Sin permiso: te aviso solo en el chat');
+      chatDraw();
+    });
   },
   /* cuenta */
   toggleacct: () => {

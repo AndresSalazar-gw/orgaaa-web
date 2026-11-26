@@ -26,6 +26,12 @@
 .chat-hd .sp {
   flex: 1;
 }
+/* Puntito discreto Claude / Demo: solo el punto, el nombre sale en el tooltip. */
+.chat-hd .dotai.mini {
+  gap: 0;
+  padding: 6px; /* área más grande para pasar el mouse */
+  cursor: help;
+}
 
 /* Orbe naranja de Orga (su "foto de perfil"). */
 .corb {

@@ -1,13 +1,16 @@
 /* =========================================================
    ORGAAA · VOZ Y CEREBRO DE ORGA
-   Aquí viven 3 piezas que usa el chat (views-orga.js):
-   · responder() = el cerebro: entiende tu pregunta y arma la respuesta con tus tareas reales
-   · oir()       = el oído: micrófono → texto
-   · hablar()    = la boca: texto → voz
-   Todo usa las funciones de voz que ya trae el navegador (Web Speech API):
+   Aquí viven las piezas que usa el chat (views-orga.js):
+   · preguntarAClaude() = el cerebro principal: le pregunta a Claude a través
+                          del servidor (netlify/functions/orga.mjs)
+   · responder()        = el cerebro de respaldo: palabras clave, sin internet ni servidor
+   · oir()              = el oído: micrófono → texto
+   · hablar()           = la boca: texto → voz
+   La voz usa las funciones que ya trae el navegador (Web Speech API):
    · SpeechRecognition  = oído  (voz → texto)
    · speechSynthesis    = boca  (texto → voz)
-   No hay llaves de API ni servidor. Funciona en Chrome, Edge y Safari.
+   La clave de la API de Claude NO está aquí: vive en el servidor (Netlify).
+   Funciona en Chrome, Edge y Safari.
    Firefox no tiene reconocimiento de voz: ahí quedan los botones de ejemplo.
    ========================================================= */
 
@@ -201,6 +204,89 @@ function responder(raw) {
   };
 }
 
+/* ---------- el cerebro principal: Claude, a través del servidor ---------- */
+// Dirección de la función de Netlify que habla con Claude.
+const ORGA_URL = '/.netlify/functions/orga';
+// Cuánto esperamos al servidor antes de rendirnos y usar el respaldo.
+const ORGA_ESPERA_MS = 12000;
+
+// ahoraIso() devuelve la fecha y hora local con zona horaria, ej. "2026-11-26T15:30:00-06:00 (Jueves 26)".
+// Claude la necesita para calcular "mañana", "en una hora", etc.
+function ahoraIso() {
+  const d = new Date();
+  // getTimezoneOffset() da los minutos de diferencia con UTC (en El Salvador, 360 = -06:00).
+  const off = -d.getTimezoneOffset();
+  const dos = (n) => String(Math.floor(Math.abs(n))).padStart(2, '0');
+  const zona = (off >= 0 ? '+' : '-') + dos(off / 60) + ':' + dos(off % 60);
+  const iso = `${d.getFullYear()}-${dos(d.getMonth() + 1)}-${dos(d.getDate())}T${dos(d.getHours())}:${dos(d.getMinutes())}:00${zona}`;
+  return `${iso} (${dayStr()})`;
+}
+
+// fechaDeDia() convierte "días desde hoy" (0, 1, 2…) en una fecha AAAA-MM-DD.
+function fechaDeDia(dias) {
+  const d = new Date();
+  d.setDate(d.getDate() + (+dias || 0));
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+// preguntarAClaude() manda la charla y tus datos al servidor y devuelve:
+// · { reply, actions }  si Claude contestó
+// · { aviso }           si el servidor dijo algo que hay que mostrar (mensaje muy largo, vas muy rápido)
+// · null                si no hay servidor o falló (ahí el chat usa el respaldo de palabras clave)
+async function preguntarAClaude() {
+  // Historial: los últimos 12 mensajes, en el formato que entiende la API (user / assistant).
+  const historial = (S.chat || []).slice(-12).map((m) => ({
+    role: m.who === 'yo' ? 'user' : 'assistant',
+    content: m.text,
+  }));
+  // Tareas de las apps conectadas: primero las pendientes, después las hechas. Máximo 80.
+  const todas = S.tasks.filter((t) => srcOn(t.src));
+  const tareas = [...todas.filter((t) => !t.done), ...todas.filter((t) => t.done)].slice(0, 80).map((t) => ({
+    id: t.id,
+    titulo: t.title,
+    workspace: t.ws || null,
+    minutos: t.min,
+    prioridad: t.prio,
+    fecha: `${fechaDeDia(t.day)} (${t.due})`,
+    hecha: !!t.done,
+  }));
+  // Eventos de hoy (d = 0) de las apps conectadas.
+  const eventos = S.events.filter((e) => e.d === 0 && srcOn(e.src)).map((e) => ({ titulo: e.title, hora: e.t }));
+  // Workspaces: solo id y nombre.
+  const workspaces = S.workspaces.map((w) => ({ id: w.id, nombre: w.name }));
+
+  // AbortController corta el pedido si el servidor tarda demasiado.
+  const corte = new AbortController();
+  const reloj = setTimeout(() => corte.abort(), ORGA_ESPERA_MS);
+  try {
+    const res = await fetch(ORGA_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ historial, tareas, eventos, workspaces, ahora: ahoraIso(), nombre: userName() }),
+      signal: corte.signal,
+    });
+    // Si la respuesta no es JSON (ej. Live Server devuelve una página de error), no hay servidor.
+    const data = await res.json().catch(() => null);
+    if (!data) return null;
+    // 413 (muy largo) y 429 (muy rápido): mostramos el aviso del servidor tal cual.
+    if (res.status === 413 || res.status === 429) return { aviso: data.error };
+    // Cualquier otro error: lo anotamos en la consola y usamos el respaldo.
+    if (!res.ok) {
+      console.warn('Orga (servidor):', data.error || res.status);
+      return null;
+    }
+    // Todo bien: devolvemos texto y acciones.
+    return { reply: String(data.reply || ''), actions: Array.isArray(data.actions) ? data.actions : [] };
+  } catch (e) {
+    // Sin internet, sin servidor o se acabó el tiempo.
+    console.warn('Orga: sin servidor, uso el respaldo.', e && e.name);
+    return null;
+  } finally {
+    // Apagamos el reloj de corte pase lo que pase.
+    clearTimeout(reloj);
+  }
+}
+
 /* ---------- la boca: Orga habla ---------- */
 // elegirVoz() busca una voz en español. Prefiere latinoamericano (es-MX, es-US, es-419) antes que España.
 function elegirVoz() {
@@ -300,4 +386,4 @@ const ERR = {
 };
 
 // Objeto público: el chat solo usa estas piezas.
-const Voz = { soporta: !!SR, oir, detener, hablar, responder, ERR };
+const Voz = { soporta: !!SR, oir, detener, hablar, responder, preguntarAClaude, ERR };

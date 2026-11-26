@@ -1,2 +1,6 @@
 [build]
   publish = "."
+
+# Carpeta de las funciones del servidor (Hey Orga habla con Claude desde aquí).
+[functions]
+  directory = "netlify/functions"
