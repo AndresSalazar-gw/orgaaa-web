@@ -4,3 +4,9 @@
 # Carpeta de las funciones del servidor (Hey Orga habla con Claude desde aquí).
 [functions]
   directory = "netlify/functions"
+
+# El manifest de la web app se sirve con su tipo correcto para que Orga se pueda instalar.
+[[headers]]
+  for = "/manifest.webmanifest"
+  [headers.values]
+    Content-Type = "application/manifest+json"
